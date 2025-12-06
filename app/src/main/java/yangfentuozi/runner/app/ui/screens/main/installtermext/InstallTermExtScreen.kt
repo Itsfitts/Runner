@@ -30,7 +30,8 @@ import yangfentuozi.runner.app.ui.viewmodels.InstallTermExtViewModel
 @Composable
 fun InstallTermExtScreen(
     uri: Uri?,
-    onShowToastRes: (Int) -> Unit,
+    moduleId: String?,
+    purge: Boolean?,
     viewModel: InstallTermExtViewModel = viewModel(),
     paddingValues: PaddingValues?,
     onInstallingStateChanged: ((Boolean) -> Unit)? = null
@@ -57,7 +58,14 @@ fun InstallTermExtScreen(
     // 处理安装逻辑
     LaunchedEffect(uri) {
         if (uri != null) {
-            viewModel.startInstallation(uri, onShowToastRes)
+            viewModel.startInstallation(uri)
+        }
+    }
+
+    // 处理卸载逻辑
+    LaunchedEffect(moduleId) {
+        if (moduleId != null && purge != null) {
+            viewModel.startUninstallation(moduleId, purge)
         }
     }
 

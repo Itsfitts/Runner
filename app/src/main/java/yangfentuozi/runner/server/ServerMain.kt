@@ -22,17 +22,14 @@ import rikka.rish.RishService
 import yangfentuozi.runner.BuildConfig
 import yangfentuozi.runner.server.callback.IExitCallback
 import yangfentuozi.runner.server.util.ExecUtils
+import yangfentuozi.runner.server.util.ModuleManager
 import yangfentuozi.runner.server.util.ProcessUtils
-import yangfentuozi.runner.shared.data.EnvInfo
 import yangfentuozi.runner.shared.data.ProcessInfo
-import yangfentuozi.runner.shared.data.TermExtVersion
-import java.io.BufferedReader
+import yangfentuozi.runner.shared.data.TermModuleInfo
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.io.InputStreamReader
-import java.util.regex.Pattern
 import java.util.zip.ZipFile
 import kotlin.system.exitProcess
 
@@ -42,8 +39,8 @@ class ServerMain : IService.Stub() {
         const val DATA_PATH = "/data/local/tmp/runner"
         const val USR_PATH = "$DATA_PATH/usr"
         const val HOME_PATH = "$DATA_PATH/home"
-        const val LIB_PROCESS_UTILS = "$HOME_PATH/.local/lib/libprocessutils.so"
-        const val LIB_EXEC_UTILS = "$HOME_PATH/.local/lib/libexecutils.so"
+        const val LIB_PROCESS_UTILS = "$USR_PATH/lib/libprocessutils.so"
+        const val LIB_EXEC_UTILS = "$USR_PATH/lib/libexecutils.so"
         val PAGE_SIZE: Int = Os.sysconf(OsConstants._SC_PAGESIZE).toInt()
 
         fun tarGzDirectory(srcDir: File, tarGzFile: File) {
@@ -139,7 +136,6 @@ class ServerMain : IService.Stub() {
     private val processUtils = ProcessUtils()
     private val execUtils = ExecUtils()
     private val rishService: RishService
-    private var customEnv: List<EnvInfo> = emptyList()
 
     init {
         // 设置进程名
@@ -148,8 +144,7 @@ class ServerMain : IService.Stub() {
         Log.i(TAG, "start")
 
         // 确保数据文件夹存在
-        File("$HOME_PATH/.local/bin").mkdirs()
-        File("$HOME_PATH/.local/lib").mkdirs()
+        ModuleManager.init()
 
         // 准备 Handler
         mHandler = Handler(Looper.getMainLooper())
@@ -179,9 +174,9 @@ class ServerMain : IService.Stub() {
                 return if (entry != null) {
                     Log.i(TAG, "unzip $name")
                     val out = if (isBin)
-                        "$HOME_PATH/.local/bin/$name"
+                        "$USR_PATH/bin/$name"
                     else
-                        "$HOME_PATH/.local/lib/lib${name}.so"
+                        "$USR_PATH/lib/lib${name}.so"
                     val perm = if (isBin) "700" else "500"
 
                     try {
@@ -217,7 +212,7 @@ class ServerMain : IService.Stub() {
             }
             if (releaseLibFromApp("rish", false)) {
                 // 初始化 Rish
-                RishConfig.setLibraryPath("$HOME_PATH/.local/lib")
+                RishConfig.setLibraryPath("$USR_PATH/lib")
                 RishConfig.init()
             }
             try {
@@ -230,7 +225,6 @@ class ServerMain : IService.Stub() {
         // 启动 RishService
         Log.i(TAG, "start RishService")
         rishService = RishService()
-        updateRishServiceEnv()
     }
 
     override fun destroy() {
@@ -248,7 +242,6 @@ class ServerMain : IService.Stub() {
 
     override fun exec(
         cmd: String?,
-        procName: String?,
         callback: IExitCallback?,
         stdout: ParcelFileDescriptor
     ) {
@@ -288,14 +281,8 @@ class ServerMain : IService.Stub() {
                     Log.w(TAG, "set permission error", e)
                 }
 
-                val envp = mergedEnv
-
                 // 准备命令参数（不使用 -c，通过 stdin 传递命令）
-                val argv = arrayOf(
-                    "bash",
-                    "--nice-name",
-                    if (procName.isNullOrEmpty()) "execTask" else procName
-                )
+                val argv = arrayOf("bash")
 
                 // 创建管道用于 stdin
                 val stdinPipe = ParcelFileDescriptor.createPipe()
@@ -306,7 +293,6 @@ class ServerMain : IService.Stub() {
                 val pid = execUtils.exec(
                     "$USR_PATH/bin/bash",  // 可执行文件路径
                     argv,
-                    envp,
                     stdinRead.detachFd(),
                     stdout.fd,
                     stdout.detachFd()
@@ -344,12 +330,7 @@ class ServerMain : IService.Stub() {
         }.start()
     }
 
-    override fun syncAllData(envs: MutableList<EnvInfo>?) {
-        customEnv = envs ?: emptyList()
-        updateRishServiceEnv()
-    }
-
-    override fun getShellService(): IBinder? {
+    override fun getShellService(): IBinder {
         return rishService
     }
 
@@ -431,230 +412,32 @@ class ServerMain : IService.Stub() {
         }
     }
 
-    override fun installTermExt(
-        termExtZip: String?,
-        callback: IExitCallback?,
+    override fun installTermModule(
+        modZip: String,
+        callback: IExitCallback,
         stdout: ParcelFileDescriptor
     ) {
-        Thread {
-            val writer = ParcelFileDescriptor.AutoCloseOutputStream(stdout).bufferedWriter()
-            fun writeOutput(line: String?) {
-                try {
-                    writer.write(line)
-                    writer.newLine()
-                    writer.flush()
-                } catch (e: IOException) {
-                    Log.e(TAG, "write output error", e)
-                }
-            }
-
-            fun exit(isSuccessful: Boolean) {
-                try {
-                    writer.close()
-                } catch (e: IOException) {
-                    Log.e(TAG, "close writer error", e)
-                }
-                try {
-                    callback?.onExit(if (isSuccessful) 0 else 1)
-                } catch (_: RemoteException) {
-                }
-            }
-            try {
-                Log.i(TAG, "install terminal extension: $termExtZip")
-                writeOutput("- Install terminal extension: $termExtZip")
-                val app = ZipFile(termExtZip)
-                val buildPropEntry = app.getEntry("build.prop")
-                val installShEntry = app.getEntry("install.sh")
-                if (buildPropEntry == null) {
-                    Log.e(TAG, "'build.prop' doesn't exist")
-                    writeOutput(" ! 'build.prop' doesn't exist")
-                    exit(false)
-                    return@Thread
-                }
-                if (installShEntry == null) {
-                    Log.e(TAG, "'install.sh' doesn't exist")
-                    writeOutput(" ! 'install.sh' doesn't exist")
-                    exit(false)
-                    return@Thread
-                }
-                val buildProp = app.getInputStream(buildPropEntry)
-                val termExtVersion = TermExtVersion(buildProp)
-                buildProp.close()
-                Log.i(
-                    TAG, """
-                        terminal extension:
-                        version: ${termExtVersion.versionName} (${termExtVersion.versionCode})
-                        abi: ${termExtVersion.abi}
-                    """.trimIndent()
-                )
-                writeOutput(
-                    """
-                       - Terminal extension:
-                       - Version: ${termExtVersion.versionName} (${termExtVersion.versionCode})
-                       - ABI: ${termExtVersion.abi}
-                    """.trimIndent()
-                )
-                val indexOf = Build.SUPPORTED_ABIS.indexOf(termExtVersion.abi)
-                if (indexOf == -1) {
-                    Log.e(TAG, "unsupported ABI: ${termExtVersion.abi}")
-                    writeOutput("! Unsupported ABI: ${termExtVersion.abi}")
-                    exit(false)
-                    return@Thread
-                } else if (indexOf != 0) {
-                    Log.w(TAG, "ABI is not preferred: ${termExtVersion.abi}")
-                    writeOutput("- ABI is not preferred: ${termExtVersion.abi}")
-                }
-                fun cleanupAndReturn(isSuccessful: Boolean) {
-                    writeOutput("- Cleanup $DATA_PATH/install_temp")
-                    File("$DATA_PATH/install_temp").deleteRecursively()
-                    exit(isSuccessful)
-                }
-                Log.i(TAG, "unzip files.")
-                writeOutput("- Unzip files.")
-                val entries = app.entries()
-                while (entries.hasMoreElements()) {
-                    val zipEntry = entries.nextElement()
-                    try {
-                        if (zipEntry.isDirectory) {
-                            Log.i(
-                                TAG,
-                                "unzip '${zipEntry.name}' to '$DATA_PATH/install_temp/${zipEntry.name}'"
-                            )
-                            writeOutput("- Unzip '${zipEntry.name}' to '$DATA_PATH/install_temp/${zipEntry.name}'")
-                            val file = File("$DATA_PATH/install_temp/${zipEntry.name}")
-                            if (!file.exists()) file.mkdirs()
-                        } else {
-                            val file = File("$DATA_PATH/install_temp/${zipEntry.name}")
-                            Log.i(TAG, "unzip '${zipEntry.name}' to '${file.absolutePath}'")
-                            writeOutput("- Unzip '${zipEntry.name}' to '${file.absolutePath}'")
-                            file.parentFile?.let { if (!it.exists()) it.mkdirs() }
-                            if (!file.exists()) file.createNewFile()
-                            app.getInputStream(zipEntry).use { input ->
-                                FileOutputStream(file).use {
-                                    input.copyTo(it, bufferSize = PAGE_SIZE)
-                                }
-                            }
-                        }
-                    } catch (e: IOException) {
-                        Log.e(TAG, "unable to unzip file: ${zipEntry.name}", e)
-                        writeOutput(
-                            "! Unable to unzip file: ${zipEntry.name}\n${e.stackTraceToString()}"
-                        )
-                        cleanupAndReturn(false)
-                        return@Thread
-                    }
-                }
-                Log.i(TAG, "complete unzipping")
-                writeOutput("- Complete unzipping")
-                val installScript = "$DATA_PATH/install_temp/install.sh"
-                if (!File(installScript).setExecutable(true)) {
-                    Log.e(TAG, "unable to set executable")
-                    writeOutput("! Unable to set executable")
-                    cleanupAndReturn(false)
-                    return@Thread
-                }
-                Log.i(TAG, "execute install script")
-                writeOutput("- Execute install script")
-                try {
-                    val process = Runtime.getRuntime().exec("/system/bin/sh")
-                    val out = process.outputStream
-                    out.write(("$installScript 2>&1\n").toByteArray())
-                    out.flush()
-                    out.close()
-                    val br = BufferedReader(InputStreamReader(process.inputStream))
-                    var line: String?
-                    while (br.readLine().also { line = it } != null) {
-                        Log.i(TAG, "output: $line")
-                        writeOutput("- ScriptOuts: $line")
-                    }
-                    br.close()
-                    val ev = process.waitFor()
-                    if (ev == 0) {
-                        Log.i(TAG, "exit with 0")
-                        writeOutput("- Install script exit successfully")
-                    } else {
-                        Log.e(TAG, "exit with non-zero value $ev")
-                        writeOutput("! Install script exit with non-zero value $ev")
-                        cleanupAndReturn(false)
-                        return@Thread
-                    }
-                } catch (e: Exception) {
-                    writeOutput("! ${e.stackTraceToString()}")
-                    cleanupAndReturn(false)
-                    return@Thread
-                }
-                writeOutput("- Finish")
-                Log.i(TAG, "finish")
-                cleanupAndReturn(true)
-                return@Thread
-            } catch (e: IOException) {
-                Log.e(TAG, "read terminal extension file error!", e)
-                writeOutput(
-                    "! Read terminal extension file error!\n${e.stackTraceToString()}"
-                )
-                exit(false)
-                return@Thread
-            }
-        }.start()
+        ModuleManager.install(modZip, callback, stdout)
     }
 
-    override fun removeTermExt() {
-        Log.i(TAG, "remove terminal extension")
-        File(USR_PATH).deleteRecursively()
-        Log.i(TAG, "finish")
+    override fun uninstallTermModule(
+        moduleId: String,
+        callback: IExitCallback,
+        stdout: ParcelFileDescriptor,
+        purge: Boolean
+    ) {
+        ModuleManager.uninstall(moduleId, callback, stdout, purge)
     }
 
-    override fun getTermExtVersion(): TermExtVersion {
-        val buildProp = File("$USR_PATH/build.prop")
-        var result: TermExtVersion? = null
-        if (buildProp.exists() && buildProp.isFile) {
-            try {
-                FileInputStream(buildProp).use { `in` ->
-                    result = TermExtVersion(`in`)
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "getTermExtVersion error", e)
-                throw RemoteException(e.stackTraceToString())
-            }
-        }
-        return result ?: TermExtVersion("", -1, "")
+    override fun getTermModules(): Array<TermModuleInfo> {
+        return ModuleManager.listModules().toTypedArray()
     }
 
-    val mergedEnv: Array<String>
-        get() {
-            // 准备环境变量
-            val envMap = mutableMapOf<String, String>()
-            envMap["PREFIX"] = USR_PATH
-            envMap["HOME"] = HOME_PATH
-            envMap["TMPDIR"] = "$USR_PATH/tmp"
-            envMap["PATH"] = "$HOME_PATH/.local/bin:$USR_PATH/bin:$USR_PATH/bin/applets"
-            envMap["LD_LIBRARY_PATH"] = "$HOME_PATH/.local/lib:$USR_PATH/lib"
+    override fun enableTermModule(moduleId: String) {
+        ModuleManager.enableModule(moduleId)
+    }
 
-            // 添加自定义环境变量
-            for (entry in customEnv) {
-
-                // 跳过未启用的
-                if (!entry.enabled) continue
-
-                entry.key?.let { key ->
-                    entry.value?.let { value ->
-                        val oldValue = envMap[key]
-                        envMap[key] = if (oldValue != null) {
-                            value.replace(
-                                Regex("\\$(${Pattern.quote(key)}|\\{${Pattern.quote(key)}\\})"),
-                                oldValue
-                            )
-                        } else {
-                            value
-                        }
-                    }
-                }
-            }
-
-            return envMap.map { "${it.key}=${it.value}" }.toTypedArray()
-        }
-
-    fun updateRishServiceEnv() {
-        rishService.updateEnv(mergedEnv)
+    override fun disableTermModule(moduleId: String) {
+        ModuleManager.disableModule(moduleId)
     }
 }

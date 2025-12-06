@@ -51,8 +51,6 @@
     <string name="export_data_summary">Export the data to tar package</string>
     <string name="import_data">Import Data</string>
     <string name="import_data_summary">Import backup data</string>
-    <string name="env_manage">Environment manage</string>
-    <string name="env_manage_summary">These environment configs will be loaded before executing the command.</string>
     <string name="force_kill">Force kill processes</string>
     <string name="force_kill_summary">This does not allow the process to exit gracefully, bypassing the cleanup mechanism. Do not enable this under normal circumstances.</string>
     <string name="kill_child_processes">Kill all child processes</string>
@@ -93,13 +91,14 @@
     <string name="reinstall">Reinstall</string>
     <string name="remove">Remove</string>
     <string name="term_ext_summary">Provide external extension commands</string>
-    <string name="term_ext_title">Terminal Extension</string>
-    <string name="term_ext_title_installed">Terminal Extension (Installed)</string>
+    <string name="term_ext_title">Terminal Module</string>
+    <string name="term_ext_title_installed">Terminal Module (Installed)</string>
     <string name="term_ext_version">Version: %s (%d)\nABI: %s</string>
     <string name="empty">Empty</string>
-    <string name="pick_term_ext">Pick terminal extension</string>
-    <string name="install_term_ext">Install terminal extension</string>
-    <string name="will_remove_term_ext">Remove terminal extension?</string>
+    <string name="pick_term_ext">Pick terminal module</string>
+    <string name="install_term_ext">Install terminal module</string>
+    <string name="uninstall_term_ext">Uninstall terminal module</string>
+    <string name="will_remove_term_ext">Remove terminal module?</string>
     <string name="failed_to_get_the_process_list">Failed to get the process list</string>
     <string name="more" translatable="false">...</string>
     <string name="value">Value</string>
@@ -117,7 +116,7 @@
     <string name="waiting_service">Waiting Service…</string>
     <string name="exec_command">Exec command</string>
 
-    <string name="term_ext">Terminal Extension</string>
+    <string name="term_ext">Terminal Module</string>
     <string name="installed">Installed</string>
     <string name="not_installed">Not Installed</string>
     <string name="no_processes">No running processes</string>
@@ -130,5 +129,8 @@
     <string name="dark_theme">Dark theme</string>
     <string name="runtime">Runtime</string>
     <string name="kill_all_processes">Kill all processes</string>
+    <string name="title_module">Modules</string>
+    <string name="no_modules">No installed modules</string>
+    <string name="purge_uninstall">Delete configuration files</string>
 
 </resources>

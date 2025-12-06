@@ -67,7 +67,6 @@ fun ExecDialog(
                 // 启动命令执行
                 service.exec(
                     command.command ?: "",
-                    command.name ?: "command",
                     exitCallback,
                     writePipe
                 )

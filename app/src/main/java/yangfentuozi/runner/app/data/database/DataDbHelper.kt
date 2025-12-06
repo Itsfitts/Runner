@@ -8,12 +8,10 @@ class DataDbHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(TABLE_COMMANDS_CREATE)
-        db.execSQL(TABLE_ENVIRONMENT_CREATE)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_COMMANDS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_ENVIRONMENT")
         onCreate(db)
     }
 
@@ -35,17 +33,5 @@ class DataDbHelper(context: Context) :
                 COLUMN_NAME + " TEXT NOT NULL, " +
                 COLUMN_COMMAND + " TEXT NOT NULL, " +
                 COLUMN_KEEP_ALIVE + " INTEGER NOT NULL DEFAULT 0);"
-
-        // environment 表
-        const val TABLE_ENVIRONMENT: String = "environment"
-        const val COLUMN_KEY: String = "env_key"
-        const val COLUMN_VALUE: String = "env_value"
-        const val COLUMN_ENABLED: String = "env_enabled"
-
-        private const val TABLE_ENVIRONMENT_CREATE = "CREATE TABLE " + TABLE_ENVIRONMENT + " (" +
-                COLUMN_KEY + " TEXT NOT NULL, " +
-                COLUMN_VALUE + " TEXT NOT NULL, " +
-                COLUMN_ENABLED + " INTEGER NOT NULL DEFAULT 1, " +
-                "PRIMARY KEY (" + COLUMN_KEY + "));"
     }
 }

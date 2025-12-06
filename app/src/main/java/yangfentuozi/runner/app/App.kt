@@ -25,9 +25,6 @@ class App : Application(), Thread.UncaughtExceptionHandler {
         pref = PreferenceManager.getDefaultSharedPreferences(this)
 
         Runner.init()
-        Runner.addServiceStatusListener {
-            if (it) Runner.service?.syncAllData(DataRepository.Companion.getInstance(this).getAllEnvs())
-        }
     }
 
     fun addActivity(activity: Activity?) {

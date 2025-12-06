@@ -22,14 +22,13 @@
  */
 JNIEXPORT jint JNICALL
 Java_yangfentuozi_runner_server_util_ExecUtils_exec(
-    JNIEnv *env,
-    jobject thiz,
-    jstring executable,
-    jobjectArray argv,
-    jobjectArray envp,
-    jint stdinFd,
-    jint stdoutFd,
-    jint stderrFd
+        JNIEnv *env,
+        jobject thiz,
+        jstring executable,
+        jobjectArray argv,
+        jint stdinFd,
+        jint stdoutFd,
+        jint stderrFd
 ) {
     // 转换可执行文件路径
     const char *exec_path = (*env)->GetStringUTFChars(env, executable, NULL);
@@ -39,23 +38,23 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
     }
     char *c_exec_path = strdup(exec_path);
     (*env)->ReleaseStringUTFChars(env, executable, exec_path);
-    
+
     if (!c_exec_path) {
         LOGE("Failed to allocate executable path");
         return -1;
     }
-    
+
     // 转换 argv
     jsize argc = (*env)->GetArrayLength(env, argv);
-    char **c_argv = (char **)malloc((argc + 1) * sizeof(char *));
+    char **c_argv = (char **) malloc((argc + 1) * sizeof(char *));
     if (!c_argv) {
         LOGE("Failed to allocate argv");
         free(c_exec_path);
         return -1;
     }
-    
+
     for (int i = 0; i < argc; i++) {
-        jstring jstr = (jstring)(*env)->GetObjectArrayElement(env, argv, i);
+        jstring jstr = (jstring) (*env)->GetObjectArrayElement(env, argv, i);
         const char *str = (*env)->GetStringUTFChars(env, jstr, NULL);
         c_argv[i] = strdup(str);
         (*env)->ReleaseStringUTFChars(env, jstr, str);
@@ -63,40 +62,18 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
     }
     c_argv[argc] = NULL;
 
-    // 转换 envp
-    jsize envc = (*env)->GetArrayLength(env, envp);
-    char **c_envp = (char **)malloc((envc + 1) * sizeof(char *));
-    if (!c_envp) {
-        LOGE("Failed to allocate envp");
-        for (int i = 0; i < argc; i++) free(c_argv[i]);
-        free(c_argv);
-        free(c_exec_path);
-        return -1;
-    }
-    
-    for (int i = 0; i < envc; i++) {
-        jstring jstr = (jstring)(*env)->GetObjectArrayElement(env, envp, i);
-        const char *str = (*env)->GetStringUTFChars(env, jstr, NULL);
-        c_envp[i] = strdup(str);
-        (*env)->ReleaseStringUTFChars(env, jstr, str);
-        (*env)->DeleteLocalRef(env, jstr);
-    }
-    c_envp[envc] = NULL;
-
     // Fork 子进程
     pid_t pid = fork();
-    
+
     if (pid < 0) {
         // Fork 失败
         LOGE("Fork failed: %s", strerror(errno));
         for (int i = 0; i < argc; i++) free(c_argv[i]);
         free(c_argv);
-        for (int i = 0; i < envc; i++) free(c_envp[i]);
-        free(c_envp);
         free(c_exec_path);
         return -1;
     }
-    
+
     if (pid == 0) {
         // 子进程
 
@@ -105,7 +82,7 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
             LOGE("setsid: %s", strerror(errno));
             exit(1);
         }
-        
+
         // 重定向文件描述符
         if (stdinFd >= 0) {
             if (dup2(stdinFd, STDIN_FILENO) < 0) {
@@ -114,7 +91,7 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
             }
             close(stdinFd);
         }
-        
+
         if (stdoutFd >= 0) {
             if (dup2(stdoutFd, STDOUT_FILENO) < 0) {
                 LOGE("dup2 stdout failed: %s", strerror(errno));
@@ -129,7 +106,7 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
             }
             close(stdoutFd);
         }
-        
+
         if (stderrFd >= 0 && stderrFd != stdoutFd) {
             if (dup2(stderrFd, STDERR_FILENO) < 0) {
                 LOGE("dup2 stderr failed: %s", strerror(errno));
@@ -140,32 +117,30 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
 
         // 输出进程 id
         dprintf(STDOUT_FILENO, "%d\n", getpid());
-        
+
         // 执行命令（使用独立的可执行文件路径）
-        execve(c_exec_path, c_argv, c_envp);
-        
+        execv(c_exec_path, c_argv);
+
         // 如果 execve 返回，说明失败了
         LOGE("execve failed: %s (executable: %s)", strerror(errno), c_exec_path);
         _exit(127);
     }
-    
+
     // 父进程
     LOGD("Created child process with PID: %d", pid);
-    
+
     // 关闭父进程中的 FD（如果传递了的话）
     if (stdinFd >= 0) close(stdinFd);
     if (stdoutFd >= 0) close(stdoutFd);
     // 只有当 stderrFd 不等于 stdoutFd 时才关闭（避免重复关闭）
     if (stderrFd >= 0 && stderrFd != stdoutFd) close(stderrFd);
-    
+
     // 清理内存
     free(c_exec_path);
     for (int i = 0; i < argc; i++) free(c_argv[i]);
     free(c_argv);
-    for (int i = 0; i < envc; i++) free(c_envp[i]);
-    free(c_envp);
-    
-    return (jint)pid;
+
+    return (jint) pid;
 }
 
 /**
@@ -175,18 +150,18 @@ Java_yangfentuozi_runner_server_util_ExecUtils_exec(
  */
 JNIEXPORT jint JNICALL
 Java_yangfentuozi_runner_server_util_ExecUtils_waitpid(
-    JNIEnv *env,
-    jobject thiz,
-    jint pid
+        JNIEnv *env,
+        jobject thiz,
+        jint pid
 ) {
     int status;
-    pid_t result = waitpid((pid_t)pid, &status, 0);
-    
+    pid_t result = waitpid((pid_t) pid, &status, 0);
+
     if (result < 0) {
         LOGE("waitpid failed: %s", strerror(errno));
         return 255;
     }
-    
+
     if (WIFEXITED(status)) {
         int exitCode = WEXITSTATUS(status);
         LOGD("Process %d exited with code %d", pid, exitCode);
@@ -196,7 +171,7 @@ Java_yangfentuozi_runner_server_util_ExecUtils_waitpid(
         LOGD("Process %d terminated by signal %d", pid, signal);
         return 128 + signal;
     }
-    
+
     return 255;
 }
 

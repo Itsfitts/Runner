@@ -31,7 +31,7 @@ class InstallTermExtViewModel(application: Application) : AndroidViewModel(appli
     private val isStopped = AtomicBoolean(false)
     private val termExtCacheDir = File(application.externalCacheDir, "termExtCache")
 
-    fun startInstallation(uri: Uri?, onShowToastRes: (Int) -> Unit) {
+    fun startInstallation(uri: Uri?) {
         if (uri == null) {
             appendOutput("! Invalid intent or file\n")
             _hasError.value = true
@@ -56,7 +56,7 @@ class InstallTermExtViewModel(application: Application) : AndroidViewModel(appli
                 termExtCacheDir.deleteRecursively()
                 termExtCacheDir.mkdirs()
 
-                val file = File(termExtCacheDir, "termux_ext.zip")
+                val file = File(termExtCacheDir, "term_ext.zip")
                 input.use { inputStream ->
                     file.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream, bufferSize = ServerMain.PAGE_SIZE)
@@ -84,13 +84,7 @@ class InstallTermExtViewModel(application: Application) : AndroidViewModel(appli
                 return@launch
             }
 
-            val service = Runner.service
-            if (service == null) {
-                appendOutput("! Service not available\n")
-                _hasError.value = true
-                _isInstalling.value = false
-                return@launch
-            }
+            val service = Runner.service!!
 
             // 开始安装（状态已经在函数开始时设置为 true）
             appendOutput("- Starting installation...\n")
@@ -133,7 +127,87 @@ class InstallTermExtViewModel(application: Application) : AndroidViewModel(appli
                 }
 
                 // 启动安装
-                service.installTermExt(cacheFile.absolutePath, exitCallback, writePipe)
+                service.installTermModule(cacheFile.absolutePath, exitCallback, writePipe)
+
+                // 读取输出
+                ParcelFileDescriptor.AutoCloseInputStream(readPipe).bufferedReader().use { reader ->
+                    while (!isStopped.get()) {
+                        val line = reader.readLine() ?: break
+                        appendOutput("$line\n")
+                    }
+                }
+            } catch (e: IOException) {
+                if (!isStopped.get()) {
+                    appendOutput("! Pipe read error: ${e.message}\n")
+                    _hasError.value = true
+                    _isInstalling.value = false
+                }
+            } finally {
+                // 关闭管道
+                pipe?.let { pipes ->
+                    try {
+                        pipes[0].close()
+                    } catch (_: IOException) {
+                    }
+                    try {
+                        pipes[1].close()
+                    } catch (_: IOException) {
+                    }
+                }
+            }
+        }
+    }
+
+    fun startUninstallation(moduleId: String, purge: Boolean) {
+
+        // 在启动协程之前就设置安装状态，确保 BackHandler 能立即生效
+        _isInstalling.value = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            // 检查服务
+            if (!Runner.pingServer()) {
+                appendOutput("! Service not running\n")
+                _hasError.value = true
+                _isInstalling.value = false
+                return@launch
+            }
+
+            val service = Runner.service!!
+
+            // 开始安装（状态已经在函数开始时设置为 true）
+            appendOutput("- Starting uninstallation...\n")
+
+            var pipe: Array<ParcelFileDescriptor>? = null
+            try {
+                pipe = ParcelFileDescriptor.createPipe()
+                val readPipe = pipe[0]
+                val writePipe = pipe[1]
+
+                val exitCallback = object : IExitCallback.Stub() {
+                    override fun onExit(exitValue: Int) {
+                        if (isStopped.get()) return
+
+                        // 延迟确保所有输出都已读取
+                        Thread.sleep(200)
+
+                        appendOutput(if (exitValue == 0) {
+                            "- Uninstallation successful\n"
+                        } else {
+                            "! Uninstallation failed (exit code: $exitValue)\n"
+                        })
+
+                        _isInstalling.value = false
+                    }
+
+                    override fun errorMessage(message: String?) {
+                        if (message != null) {
+                            appendOutput("$message\n")
+                        }
+                    }
+                }
+
+                // 启动卸载
+                service.uninstallTermModule(moduleId, exitCallback, writePipe, purge)
 
                 // 读取输出
                 ParcelFileDescriptor.AutoCloseInputStream(readPipe).bufferedReader().use { reader ->

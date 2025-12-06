@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.ColorLens
@@ -74,7 +73,6 @@ import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
-    onNavigateToEnvManage: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -233,21 +231,6 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.import_data_summary),
                 onClick = { pickFileLauncher.launch(arrayOf("application/x-tar")) },
                 icon = Icons.Default.Restore,
-                showArrow = true
-            )
-        }
-
-        // 环境设置
-        item {
-            PreferenceCategory(title = stringResource(R.string.runtime))
-        }
-
-        item {
-            PreferenceItem(
-                title = stringResource(R.string.env_manage),
-                subtitle = stringResource(R.string.env_manage_summary),
-                onClick = onNavigateToEnvManage,
-                icon = Icons.AutoMirrored.Filled.Article,
                 showArrow = true
             )
         }

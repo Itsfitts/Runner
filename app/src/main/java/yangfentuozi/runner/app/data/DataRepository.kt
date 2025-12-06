@@ -1,12 +1,9 @@
 package yangfentuozi.runner.app.data
 
 import android.content.Context
-import yangfentuozi.runner.app.Runner
 import yangfentuozi.runner.app.data.database.CommandDao
 import yangfentuozi.runner.app.data.database.DataDbHelper
-import yangfentuozi.runner.app.data.database.EnvironmentDao
 import yangfentuozi.runner.shared.data.CommandInfo
-import yangfentuozi.runner.shared.data.EnvInfo
 import java.util.concurrent.Executors
 
 class DataRepository private constructor(context: Context) {
@@ -14,7 +11,6 @@ class DataRepository private constructor(context: Context) {
     private val executor = Executors.newSingleThreadExecutor()
     private val dbHelper = DataDbHelper(context.applicationContext)
     private val commandDao = CommandDao(dbHelper.writableDatabase)
-    private val environmentDao = EnvironmentDao(dbHelper.writableDatabase)
 
     private fun close() {
         dbHelper.close()
@@ -37,31 +33,6 @@ class DataRepository private constructor(context: Context) {
     }
     fun moveCommand(fromPosition: Int, toPosition: Int) {
         commandDao.move(fromPosition, toPosition)
-    }
-
-    // Environment Operations
-    fun getAllEnvs(): List<EnvInfo> = environmentDao.all
-    fun addEnv(key: String, value: String) {
-        environmentDao.insert(key, value)
-        syncToService()
-    }
-    fun updateEnv(key: String, value: String) {
-        environmentDao.update(key, value)
-        syncToService()
-    }
-    fun updateEnv(key: String, enabled: Boolean) {
-        environmentDao.update(key, enabled)
-        syncToService()
-    }
-    fun deleteEnv(key: String) {
-        environmentDao.delete(key)
-        syncToService()
-    }
-
-    private fun syncToService() {
-        executor.execute {
-            Runner.service?.syncAllData(getAllEnvs())
-        }
     }
 
     companion object {

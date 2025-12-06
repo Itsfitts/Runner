@@ -176,7 +176,6 @@ fun RunnerScreen(
     }
 
     if (showDeleteDialog != -1) {
-
         AlertDialog(
             onDismissRequest = { viewModel.hideDeleteDialog() },
             title = { Text(stringResource(R.string.delete)) },

@@ -19,7 +19,6 @@ class ExecUtils : JniUtilsBase() {
     external fun exec(
         executable: String,
         argv: Array<String>,
-        envp: Array<String>,
         stdinFd: Int,
         stdoutFd: Int,
         stderrFd: Int

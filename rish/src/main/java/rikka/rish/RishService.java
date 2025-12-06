@@ -88,8 +88,4 @@ public class RishService extends IRishService.Stub {
         }
         HOSTS.remove(hostPid);
     }
-
-    public void updateEnv(@NonNull String[] envs) {
-        customEnv = envs;
-    }
 }

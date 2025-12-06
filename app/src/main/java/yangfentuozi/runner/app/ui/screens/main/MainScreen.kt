@@ -1,12 +1,12 @@
 package yangfentuozi.runner.app.ui.screens.main
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -42,9 +42,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import yangfentuozi.runner.R
 import yangfentuozi.runner.app.Runner
-import yangfentuozi.runner.app.ui.screens.main.envmanage.EnvManageScreen
 import yangfentuozi.runner.app.ui.screens.main.home.HomeScreen
 import yangfentuozi.runner.app.ui.screens.main.installtermext.InstallTermExtScreen
+import yangfentuozi.runner.app.ui.screens.main.module.ModuleScreen
 import yangfentuozi.runner.app.ui.screens.main.proc.ProcScreen
 import yangfentuozi.runner.app.ui.screens.main.runner.RunnerScreen
 import yangfentuozi.runner.app.ui.screens.main.settings.SettingsScreen
@@ -78,21 +78,25 @@ fun MainScreen() {
                         Screen.Runner.route -> stringResource(R.string.title_runner)
                         Screen.Terminal.route -> stringResource(R.string.title_terminal)
                         Screen.Proc.route -> stringResource(R.string.title_proc)
+                        Screen.Module.route -> stringResource(R.string.title_module)
                         Screen.Settings.route -> stringResource(R.string.title_settings)
-                        Screen.EnvManage.route -> stringResource(R.string.env_manage)
-                        Screen.InstallTermExt.route -> stringResource(R.string.install_term_ext)
+                        Screen.InstallTermExt.route -> {
+                            if (mainViewModel.uninstallTermModId.value == null) stringResource(R.string.install_term_ext)
+                            else stringResource(R.string.uninstall_term_ext)
+                        }
                         else -> stringResource(R.string.app_name)
                     }
                     Text(title)
                 },
                 navigationIcon = {
                     // 为子页面显示返回按钮
-                    if (currentRoute == Screen.EnvManage.route || currentRoute == Screen.InstallTermExt.route) {
+                    if (currentRoute == Screen.InstallTermExt.route) {
                         IconButton(
-                            onClick = { 
+                            onClick = {
                                 if (currentRoute == Screen.InstallTermExt.route) {
                                     // 清除 URI
-                                    mainViewModel.setInstallTermExtUri(null)
+                                    mainViewModel.setInstallTermModUri(null)
+                                    mainViewModel.setUninstallTermModId(null, null)
                                 }
                                 navController.popBackStack()
                             },
@@ -166,12 +170,7 @@ fun MainScreen() {
                 .padding(innerPadding)
         ) {
             composable(Screen.Home.route) {
-                HomeScreen(
-                    onNavigateToInstallTermExt = { uri ->
-                        mainViewModel.setInstallTermExtUri(uri)
-                        navController.navigate(Screen.InstallTermExt.route)
-                    }
-                )
+                HomeScreen()
             }
             composable(Screen.Runner.route) {
                 RunnerScreen()
@@ -179,29 +178,35 @@ fun MainScreen() {
             composable(Screen.Proc.route) {
                 ProcScreen()
             }
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    onNavigateToEnvManage = {
-                        navController.navigate(Screen.EnvManage.route)
+            composable(Screen.Module.route) {
+                ModuleScreen(
+                    onNavigateToInstallTermMod = { uri ->
+                        mainViewModel.setInstallTermModUri(uri)
+                        mainViewModel.setUninstallTermModId(null, null)
+                        navController.navigate(Screen.InstallTermExt.route)
+                    },
+                    onNavigateToUninstallTermMod = { moduleId, purge ->
+                        mainViewModel.setInstallTermModUri(null)
+                        mainViewModel.setUninstallTermModId(moduleId, purge)
+                        navController.navigate(Screen.InstallTermExt.route)
                     }
                 )
             }
-            composable(Screen.EnvManage.route) {
-                EnvManageScreen()
+            composable(Screen.Settings.route) {
+                SettingsScreen()
             }
             composable(Screen.InstallTermExt.route) {
                 val installing by mainViewModel.isInstalling.collectAsState()
-                
+
                 // 在这个 composable 内部也添加 BackHandler，确保能拦截返回
                 BackHandler(enabled = installing) {
                     // 安装进行中时不处理返回操作
                 }
-                
+
                 InstallTermExtScreen(
-                    uri = mainViewModel.installTermExtUri.collectAsState().value,
-                    onShowToastRes = { resId ->
-                        Toast.makeText(context, resId, Toast.LENGTH_SHORT).show()
-                    },
+                    uri = mainViewModel.installTermModUri.collectAsState().value,
+                    moduleId = mainViewModel.uninstallTermModId.collectAsState().value,
+                    purge = mainViewModel.purge.collectAsState().value,
                     paddingValues = null,
                     onInstallingStateChanged = { installing ->
                         mainViewModel.setInstalling(installing)
@@ -261,6 +266,7 @@ private val bottomNavItems = listOf(
     BottomNavItem(Screen.Runner.route, Icons.Outlined.PlayArrow, R.string.title_runner),
     BottomNavItem(Screen.Terminal.route, Icons.Outlined.Terminal, R.string.title_terminal),
     BottomNavItem(Screen.Proc.route, Icons.Outlined.Layers, R.string.title_proc),
+    BottomNavItem(Screen.Module.route, Icons.Outlined.Extension, R.string.title_module),
     BottomNavItem(Screen.Settings.route, Icons.Outlined.Settings, R.string.title_settings)
 )
 
@@ -269,8 +275,8 @@ sealed class Screen(val route: String) {
     data object Runner : Screen("runner")
     data object Terminal : Screen("terminal")
     data object Proc : Screen("proc")
+    data object Module : Screen("module")
     data object Settings : Screen("settings")
-    data object EnvManage : Screen("envmanage")
     data object InstallTermExt : Screen("installtermext")
 }
 

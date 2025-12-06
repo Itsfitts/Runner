@@ -10,14 +10,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import yangfentuozi.runner.app.Runner
 import yangfentuozi.runner.app.ui.screens.main.HideAllDialogs
-import yangfentuozi.runner.shared.data.TermExtVersion
 
 class HomeViewModel(application: Application) : AndroidViewModel(application), HideAllDialogs {
     private val _refreshTrigger = MutableStateFlow(0)
     val refreshTrigger: StateFlow<Int> = _refreshTrigger.asStateFlow()
-
-    private val _termExtVersion = MutableStateFlow<TermExtVersion?>(null)
-    val termExtVersion: StateFlow<TermExtVersion?> = _termExtVersion.asStateFlow()
 
     private val _showRemoveTermExtConfirmDialog = MutableStateFlow(false)
     val showRemoveTermExtConfirmDialog: StateFlow<Boolean> = _showRemoveTermExtConfirmDialog.asStateFlow()
@@ -35,8 +31,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), H
     // 服务状态监听器
     private val serviceStatusListener = Runner.ServiceStatusListener {
         triggerRefresh()
-        // 服务状态改变时，重新加载终端扩展版本
-        loadTermExtVersion()
     }
 
     init {
@@ -49,25 +43,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), H
         Runner.addShizukuPermissionListener(shizukuPermissionListener)
         Runner.addShizukuStatusListener(shizukuStatusListener)
         Runner.addServiceStatusListener(serviceStatusListener)
-
-        // 加载终端扩展版本
-        loadTermExtVersion()
     }
 
     fun triggerRefresh() {
         _refreshTrigger.value++
-    }
-
-    fun loadTermExtVersion() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val version = Runner.service?.termExtVersion
-                _termExtVersion.value = version
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _termExtVersion.value = null
-            }
-        }
     }
 
     fun tryBindService() {
@@ -88,27 +67,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application), H
         Runner.removeServiceStatusListener(serviceStatusListener)
     }
 
-    fun removeTermExt() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                Runner.service?.removeTermExt()
-                loadTermExtVersion()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun showRemoveTermExtConfirmDialog() {
-        _showRemoveTermExtConfirmDialog.value = true
-    }
-
-    fun hideRemoveTermExtConfirmDialog() {
-        _showRemoveTermExtConfirmDialog.value = false
-    }
-
     override fun hideAllDialogs() {
-        hideRemoveTermExtConfirmDialog()
     }
 }
 
