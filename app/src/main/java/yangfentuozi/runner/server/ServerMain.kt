@@ -2,6 +2,7 @@ package yangfentuozi.runner.server
 
 import android.ddm.DdmHandleAppName
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -39,11 +40,6 @@ import kotlin.system.exitProcess
 class ServerMain : IService.Stub() {
     companion object {
         const val TAG = "runner_server"
-        const val DATA_PATH = "/data/local/tmp/runner"
-        const val USR_PATH = "$DATA_PATH/usr"
-        const val HOME_PATH = "$DATA_PATH/home"
-        const val LIB_PROCESS_UTILS = "$HOME_PATH/.local/lib/libprocessutils.so"
-        const val LIB_EXEC_UTILS = "$HOME_PATH/.local/lib/libexecutils.so"
         val PAGE_SIZE: Int = Os.sysconf(OsConstants._SC_PAGESIZE).toInt()
 
         fun tarGzDirectory(srcDir: File, tarGzFile: File) {
@@ -135,6 +131,11 @@ class ServerMain : IService.Stub() {
         }
     }
 
+    private lateinit var DATA_PATH: String
+    private lateinit var USR_PATH: String
+    private lateinit var HOME_PATH: String
+    private lateinit var LIB_PROCESS_UTILS: String
+    private lateinit var LIB_EXEC_UTILS: String
     private val mHandler: Handler
     private val processUtils = ProcessUtils()
     private val execUtils = ExecUtils()
@@ -142,10 +143,46 @@ class ServerMain : IService.Stub() {
     private var customEnv: List<EnvInfo> = emptyList()
 
     init {
+        val uid = Os.getuid()
         // 设置进程名
-        DdmHandleAppName.setAppName(TAG, Os.getuid())
+        DdmHandleAppName.setAppName(TAG, uid)
 
         Log.i(TAG, "start")
+        Log.i(TAG, "UID: $uid")
+
+        when (uid) {
+            1000 -> {
+                val externalStoragePath = Environment.getExternalStorageDirectory().path
+                DATA_PATH = "$externalStoragePath/runner"
+                Log.i(TAG, "UID is 1000, using path: $DATA_PATH")
+                try {
+                    val dataDir = File(DATA_PATH)
+                    if (!dataDir.exists()) {
+                        dataDir.mkdirs()
+                    }
+                    // Chown to user 1000 and set rwx permissions for owner
+                    Os.chown(DATA_PATH, 1000, -1) // uid 1000, gid -1 (no change)
+                    Os.chmod(DATA_PATH, "700".toInt(8)) // rwx------
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to create or set permissions for $DATA_PATH", e)
+                }
+            }
+            2000 -> {
+                DATA_PATH = "/data/local/tmp/runner"
+                Log.i(TAG, "UID is 2000, using path: $DATA_PATH")
+            }
+            else -> {
+                Log.e(TAG, "Unsupported UID: $uid")
+                exitProcess(1)
+            }
+        }
+
+        // Initialize other paths based on DATA_PATH
+        USR_PATH = "$DATA_PATH/usr"
+        HOME_PATH = "$DATA_PATH/home"
+        LIB_PROCESS_UTILS = "$HOME_PATH/.local/lib/libprocessutils.so"
+        LIB_EXEC_UTILS = "$HOME_PATH/.local/lib/libexecutils.so"
+
 
         // 确保数据文件夹存在
         File("$HOME_PATH/.local/bin").mkdirs()
@@ -347,6 +384,18 @@ class ServerMain : IService.Stub() {
     override fun syncAllData(envs: MutableList<EnvInfo>?) {
         customEnv = envs ?: emptyList()
         updateRishServiceEnv()
+    }
+
+    override fun getDataPath(): String {
+        return DATA_PATH
+    }
+
+    override fun getUsrPath(): String {
+        return USR_PATH
+    }
+
+    override fun getHomePath(): String {
+        return HOME_PATH
     }
 
     override fun getShellService(): IBinder? {

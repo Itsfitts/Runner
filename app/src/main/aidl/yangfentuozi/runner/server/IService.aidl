@@ -27,5 +27,9 @@ interface IService {
 
     void syncAllData(in List<EnvInfo> envs) = 600;
 
+    String getDataPath() = 700;
+    String getUsrPath() = 701;
+    String getHomePath() = 702;
+
     IBinder getShellService() = 30000;
 }
