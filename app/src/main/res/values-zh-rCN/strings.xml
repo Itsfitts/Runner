@@ -13,7 +13,7 @@
     <string name="keep_alive">保活</string>
     <string name="target_perm_hint" translatable="false">UID[,GID[,Groups...]]</string>
     <string name="kill">杀死</string>
-    <string name="kill_process_ask">杀死这个进程吗?</string>
+    <string name="kill_process_ask">杀死这个进程?</string>
 
     <string name="executing">执行中…</string>
     <string name="finish">结束</string>
@@ -32,36 +32,28 @@
     <string name="shizuku_not_running">Shizuku 未运行</string>
     <string name="shizuku_version">版本 %2$s, %1$s</string>
 
-    <string name="copied_info">已复制到剪切板:</string>
+    <string name="running">运行中</string>
+    <string name="stopped">已停止</string>
+    <string name="user_service">用户服务</string>
+    <string name="shizuku">Shizuku</string>
+    <string name="version">版本</string>
 
-    <string name="copy_name">复制名字</string>
-    <string name="copy_command">复制命令</string>
+    <string name="start_with_shizuku">通过 Shizuku 启动</string>
+
     <string name="create_below">在下方新建</string>
-    <string name="pack_apk">打包成APK</string>
     <string name="delete">删除</string>
 
-    <string name="packageName">包名</string>
-    <string name="versionName">版本名</string>
-    <string name="versionCode">版本号</string>
-    <string name="pinShortcutTile">固定到快捷磁贴</string>
+    <string name="kill_all_processes_ask">杀死所有进程?</string>
 
-    <string name="kill_all_processes">杀死所有进程?</string>
-
-    <string name="update_channel">更新渠道</string>
-    <string name="stable">稳定版</string>
-    <string name="beta">测试版</string>
     <string name="backup">备份</string>
     <string name="export_data">导出数据</string>
-    <string name="export_data_summary">将数据导出为JSON</string>
+    <string name="export_data_summary">将数据导出为 Tar 压缩包</string>
     <string name="import_data">导入数据</string>
-    <string name="import_data_summary">导入JSON</string>
-    <string name="env_manage">运行环境管理</string>
-    <string name="env_manage_summary">这些环境配置将会在执行命令前加载</string>
+    <string name="import_data_summary">导入备份的数据</string>
     <string name="force_kill">强制杀死进程</string>
     <string name="force_kill_summary">这不会使进程正常退出，略过进程清理机制，一般情况不要启用</string>
     <string name="kill_child_processes">杀死所有子进程</string>
     <string name="kill_child_processes_summary">这可能会有意想不到的后果</string>
-    <string name="ver_info">版本名: %s\n版本号: %d</string>
     <string name="help">帮助</string>
     <string name="copy">复制</string>
     <string name="parse_json_data_error">无法解析JSON数据</string>
@@ -69,37 +61,12 @@
     <string name="not_app_data">不是此APP的数据</string>
     <string name="data_error">数据错误</string>
     <string name="decode_error">解密数据失败</string>
-    <string name="check_update">更新</string>
-    <string name="connect_update_server_error">无法连接更新服务</string>
-    <string name="parse_json_error">无法解析JSON</string>
-    <string name="json_format_error">JSON格式错误</string>
-    <string name="check_update_msg">本地版本名: %s\n本地版本号: %d\n新版本名: %s\n新版本号: %d\n更新信息: %s</string>
-    <string name="it_is_latest_version">已是最新版本</string>
     <string name="theme">主题</string>
 
     <string name="theme_color">主题颜色</string>
     <string name="theme_color_system">系统主题色</string>
     <string name="pure_black_dark_theme">纯黑主题</string>
     <string name="pure_black_dark_theme_summary">当深色主题启用时使用纯黑主题</string>
-
-    <string name="color_red">红色</string>
-    <string name="color_pink">粉色</string>
-    <string name="color_purple">紫色</string>
-    <string name="color_deep_purple">深紫</string>
-    <string name="color_indigo">靛青</string>
-    <string name="color_blue">蓝色</string>
-    <string name="color_light_blue">浅蓝</string>
-    <string name="color_cyan">青色</string>
-    <string name="color_teal">青绿</string>
-    <string name="color_green">绿色</string>
-    <string name="color_light_green">浅绿</string>
-    <string name="color_lime">黄绿</string>
-    <string name="color_yellow">黄色</string>
-    <string name="color_amber">琥珀</string>
-    <string name="color_orange">橙色</string>
-    <string name="color_deep_orange">深橙</string>
-    <string name="color_brown">棕色</string>
-    <string name="color_blue_grey">灰蓝</string>
 
     <string name="stop_server">停止服务</string>
     <string name="about">关于</string>
@@ -123,24 +90,44 @@
     <string name="reinstall">重新安装</string>
     <string name="remove">移除</string>
     <string name="term_ext_summary">提供外部扩展命令</string>
-    <string name="term_ext_title">终端扩展包</string>
-    <string name="term_ext_title_installed">终端扩展包 (已安装)</string>
+    <string name="term_ext_title">终端模块</string>
+    <string name="term_ext_title_installed">终端模块 (已安装)</string>
     <string name="term_ext_version">版本: %s (%d)\nABI: %s</string>
     <string name="empty">空</string>
-    <string name="pick_term_ext">选择终端扩展包</string>
-    <string name="install_term_ext">安装终端扩展包</string>
-    <string name="will_remove_term_ext">移除终端扩展包？</string>
+    <string name="pick_term_ext">选择终端模块</string>
+    <string name="install_term_ext">安装终端模块</string>
+    <string name="uninstall_term_ext">卸载终端模块</string>
+    <string name="will_remove_term_ext">要移除终端模块吗？</string>
     <string name="failed_to_get_the_process_list">获取进程列表失败</string>
     <string name="value">值</string>
     <string name="key">键</string>
-    <string name="update">更新</string>
-    <string name="auto_start_exec">开机启动并执行命令</string>
-    <string name="auto_start_exec_summary">在开机时启动，并在连接到服务时自动执行命令</string>
-    <string name="startup_script">开机启动时将执行的脚本</string>
-    <string name="click_edit">点击编辑</string>
     <string name="app_settings">App 设置项</string>
     <string name="database">数据库</string>
     <string name="terminal_home">终端 Home</string>
     <string name="terminal_usr">终端 Usr</string>
     <string name="select_backup_data">选择需要备份的数据</string>
+    <string name="backup_started">已开始在后台备份。</string>
+    <string name="import_data_confirm">这将覆盖当前所有的设置和数据，确定要继续吗？</string>
+    <string name="restore_completed">还原已完成，应用即将重启。</string>
+    <string name="restore_started">已开始在后台还原。</string>
+    <string name="add_shortcut">添加快捷方式</string>
+    <string name="waiting_service">等待服务…</string>
+    <string name="exec_command">执行命令</string>
+
+    <string name="term_ext">终端模块</string>
+    <string name="installed">已安装</string>
+    <string name="not_installed">未安装</string>
+    <string name="no_processes">没有运行的进程</string>
+    <string name="data_db">数据库</string>
+    <string name="term_home">终端 Home</string>
+    <string name="term_usr">终端 Usr</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="dark">永夜</string>
+    <string name="light">永昼</string>
+    <string name="dark_theme">暗黑模式</string>
+    <string name="runtime">运行时</string>
+    <string name="kill_all_processes">杀死所有进程</string>
+    <string name="title_module">模块</string>
+    <string name="no_modules">没有已安装的模块</string>
+    <string name="purge_uninstall">删除配置文件</string>
 </resources>

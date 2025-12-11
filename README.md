@@ -26,10 +26,10 @@
 - [x] 支持杀所有子进程
 - [x] 增加进程管理
 - [x] 支持自定义环境变量
-- [x] 开机自启动执行命令
+- [ ] ~~开机自启动执行命令~~
+> 存在大量问题，已经移除
 - [x] App数据备份与还原
-- [ ] 将命令打包为独立 APK
-- [ ] 终端
+- [x] 终端
 - [ ] 终端侧载模块（类似 dpkg ）
 - [ ] 外部CLI
 
@@ -49,3 +49,8 @@
 2024/10/04: **不再使用Shizuku**
 
 2025/04/21: **重新使用Shizuku**
+
+## 特别鸣谢
+
+- [ShizukuRunner](https://github.com/WuDi-ZhanShen/ShizukuRunner)
+- [Shizuku](https://github.com/RikkaApps/Shizuku)

@@ -18,3 +18,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Runner"
 include(":app")
+include(":emulatorview", ":term")
+include(":rish")
+include(":shared")
