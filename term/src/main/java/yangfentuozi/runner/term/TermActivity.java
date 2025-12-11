@@ -60,6 +60,7 @@ import java.util.List;
 import jackpal.androidterm.emulatorview.EmulatorView;
 import jackpal.androidterm.emulatorview.TermSession;
 import jackpal.androidterm.emulatorview.UpdateCallback;
+import yangfentuozi.runner.app.ServiceHolder;
 import yangfentuozi.runner.term.util.SessionList;
 import yangfentuozi.runner.term.util.TermSettings;
 
@@ -380,23 +381,27 @@ public class TermActivity extends AppCompatActivity implements UpdateCallback, S
     }
 
     protected static TermSession createTermSession(Context context, TermSettings settings) throws IOException {
-        // Try to use RishTermSession if service is available
         if (RishBinderHolder.service == null) {
-            throw new IOException("Failed to create RishTermSession");
+            throw new IOException("Rish service is not available.");
         }
+        if (ServiceHolder.INSTANCE.getService() == null) {
+            throw new IOException("IService is not available.");
+        }
+
         try {
-            // Use RishTermSession to connect directly to server with TTY
-            // Use bash
-            String[] args = new String[]{"/data/local/tmp/runner/usr/bin/bash", "--nice-name", "term", "-l"};
-//                String[] args = new String[]{"/system/bin/sh", "-l"};
-            String workingDir = "/data/local/tmp/runner/home";
-            RishTermSession session = new RishTermSession(args, workingDir, settings);
+            String usrPath = ServiceHolder.INSTANCE.getService().getUsrPath();
+            String homePath = ServiceHolder.INSTANCE.getService().getHomePath();
+
+            String bashPath = usrPath + "/bin/bash";
+            String[] args = new String[]{bashPath, "--nice-name", "term", "-l"};
+
+            RishTermSession session = new RishTermSession(args, homePath, settings);
             session.setProcessExitMessage(context.getString(R.string.process_exit_message));
-            Log.i(TermDebug.LOG_TAG, "Using RishTermSession (server mode) with " + args[0]);
+            Log.i(TermDebug.LOG_TAG, "Using RishTermSession with bash at " + bashPath);
             return session;
         } catch (Exception e) {
-            Log.w(TermDebug.LOG_TAG, "Failed to create RishTermSession", e);
-            throw new IOException(e);
+            Log.e(TermDebug.LOG_TAG, "Failed to create RishTermSession", e);
+            throw new IOException("Failed to create terminal session.", e);
         }
     }
 

@@ -386,6 +386,18 @@ class ServerMain : IService.Stub() {
         updateRishServiceEnv()
     }
 
+    override fun getDataPath(): String {
+        return DATA_PATH
+    }
+
+    override fun getUsrPath(): String {
+        return USR_PATH
+    }
+
+    override fun getHomePath(): String {
+        return HOME_PATH
+    }
+
     override fun getShellService(): IBinder? {
         return rishService
     }

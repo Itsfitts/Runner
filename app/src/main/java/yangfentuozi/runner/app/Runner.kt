@@ -18,7 +18,11 @@ import yangfentuozi.runner.term.RishBinderHolder
 
 
 object Runner {
-    var service: IService? = null
+    var service: IService?
+        get() = ServiceHolder.service
+        set(value) {
+            ServiceHolder.service = value
+        }
     var binder: IBinder? = null
     var shizukuPermission: Boolean = false
     var shizukuStatus: Boolean = false
@@ -38,10 +42,10 @@ object Runner {
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(componentName: ComponentName?, iBinder: IBinder?) {
             if (iBinder != null && iBinder.pingBinder()) {
-                service = IService.Stub.asInterface(iBinder.also { binder = it })
-                RishBinderHolder.service = IRishService.Stub.asInterface(service?.shellService)
+                ServiceHolder.service = IService.Stub.asInterface(iBinder.also { binder = it })
+                RishBinderHolder.service = IRishService.Stub.asInterface(ServiceHolder.service?.shellService)
                 serviceVersion = try {
-                    service!!.version()
+                    ServiceHolder.service!!.version()
                 } catch (_: RemoteException) {
                     -1
                 }
